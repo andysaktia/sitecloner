@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiteCloner</title>
+<style>
+:root{--bg:#f3f5f4;--card:#fff;--ink:#16222b;--mute:#5d6b74;--line:#d9e0e2;--acc:#0e7c86;--acc-ink:#fff;--warn:#a86f00;--bad:#b3372c;--ok:#1f7a4d}
+@media(prefers-color-scheme:dark){:root{--bg:#101a20;--card:#17242c;--ink:#e6eef0;--mute:#93a5ad;--line:#2a3b45;--acc:#3fb6c2;--acc-ink:#07242a;--warn:#e0a63a;--bad:#ee7b6e;--ok:#5fcf97}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:48px 20px 64px}
+h1{font-size:2rem;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 28px;max-width:60ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px}
+.row{display:flex;gap:10px}
+input[type=text],input[type=number],textarea{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#url{font-size:1.1rem}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:8px 14px;text-decoration:none;display:inline-block}
+.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600;padding:12px 22px;white-space:nowrap}
+button.danger{color:var(--bad)}
+button:hover,.btn:hover{border-color:var(--acc)}
+details{margin-top:14px}
+summary{cursor:pointer;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+label{display:block;font-size:.9rem;color:var(--mute)}
+label input[type=number]{margin-top:4px;padding:8px 10px}
+.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);margin:8px 0}
+.chk small{display:block;color:var(--mute)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+textarea{min-height:70px;font:.85rem ui-monospace,Consolas,monospace}
+h2{font-size:1.1rem;margin:36px 0 12px}
+.proj{margin-bottom:12px}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.name{font-weight:650;word-break:break-all}
+.st{font-size:.9rem}
+.st.running,.st.finalizing{color:var(--warn)}.st.done{color:var(--ok)}.st.error{color:var(--bad)}.st.stopped{color:var(--mute)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:12px 0 8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .4s}
+.meta{color:var(--mute);font-size:.9rem}
+.meta a{color:var(--bad)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.empty{color:var(--mute);text-align:center;padding:28px}
+#msg{color:var(--bad);margin:10px 0 0;min-height:1.2em}
+footer{color:var(--mute);font-size:.85rem;margin-top:40px;max-width:70ch}
+@media(max-width:560px){.row{flex-direction:column}.two{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>SiteCloner</h1>
+  <p class="sub">Masukkan alamat situs, dapatkan salinan lengkapnya yang bisa dibuka lokal tanpa internet.</p>
+
+  <div class="card">
+    <div class="row">
+      <input id="url" type="text" placeholder="https://contoh.com" autocomplete="off" aria-label="Alamat domain utama">
+      <button class="primary" id="go">Mulai clone</button>
+    </div>
+    <p id="msg" role="alert"></p>
+    <details>
+      <summary>Pengaturan lanjutan</summary>
+      <div class="grid">
+        <label>Maks. halaman<input id="max_pages" type="number" value="200" min="1"></label>
+        <label>Kedalaman link<input id="max_depth" type="number" value="3" min="0"></label>
+        <label>Koneksi paralel<input id="concurrency" type="number" value="6" min="1" max="32"></label>
+        <label>Jeda per permintaan (detik)<input id="delay" type="number" value="0.2" min="0" step="0.1"></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="respect_robots" checked><span>Patuhi robots.txt<small>Disarankan. Halaman yang dilarang situs akan dilewati.</small></span></label>
+      <label class="chk"><input type="checkbox" id="external_assets" checked><span>Unduh aset dari domain lain<small>Gambar, font, dan CSS dari CDN agar tampilan utuh saat offline.</small></span></label>
+      <label class="chk"><input type="checkbox" id="render_js"><span>Render JavaScript (situs React/Vue/SPA)<small>Butuh Playwright. Lebih lambat, tapi isi halaman yang dibuat JavaScript ikut tersalin.</small></span></label>
+      <label class="chk"><input type="checkbox" id="strip_js"><span>Hapus JavaScript dari hasil salinan<small>Disarankan bersama render JavaScript agar halaman tidak memuat ulang data dari server asli.</small></span></label>
+      <label class="chk"><input type="checkbox" id="fresh"><span>Mulai dari nol<small>Hapus salinan lama untuk domain ini. Jika tidak dicentang, proses dilanjutkan.</small></span></label>
+      <div class="two">
+        <label>Hanya URL yang cocok (regex, satu per baris)<textarea id="include" placeholder="/blog/"></textarea></label>
+        <label>Lewati URL yang cocok (regex, satu per baris)<textarea id="exclude" placeholder="/wp-admin/&#10;logout"></textarea></label>
+      </div>
+    </details>
+  </div>
+
+  <h2>Proyek</h2>
+  <div id="list"><div class="card empty">Belum ada proyek. Masukkan alamat situs di atas untuk memulai.</div></div>
+
+  <footer>Salin hanya situs milik Anda atau yang Anda punya izin untuk menyalinnya. Menerbitkan ulang atau menerjemahkan konten orang lain tanpa izin dapat melanggar hak cipta dan ketentuan layanan situs tersebut.</footer>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LABEL={idle:'Menunggu',running:'Mengunduh',finalizing:'Merapikan link',done:'Selesai',stopped:'Dihentikan',error:'Gagal'};
+async function api(p,o){const r=await fetch(p,o);if(!r.ok){let m=r.statusText;try{const j=await r.json();m=typeof j.detail==='string'?j.detail:'Input tidak valid'}catch{}throw new Error(m)}return r.json()}
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+const lines=id=>$(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+$('#go').onclick=async()=>{
+  $('#msg').textContent='';
+  const url=$('#url').value.trim();
+  if(!url){$('#msg').textContent='Isi alamat situs dulu.';return}
+  try{
+    await post('/api/jobs',{url,max_pages:+$('#max_pages').value,max_depth:+$('#max_depth').value,
+      concurrency:+$('#concurrency').value,delay:+$('#delay').value,
+      respect_robots:$('#respect_robots').checked,external_assets:$('#external_assets').checked,
+      render_js:$('#render_js').checked,strip_js:$('#strip_js').checked,fresh:$('#fresh').checked,
+      include:lines('#include'),exclude:lines('#exclude')});
+    $('#url').value='';refresh();
+  }catch(e){$('#msg').textContent=e.message}
+};
+$('#url').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click()});
+
+async function act(kind,name){
+  try{
+    if(kind==='del'){if(!confirm('Hapus proyek '+name+' beserta semua filenya?'))return;await api('/api/projects/'+name,{method:'DELETE'})}
+    else await post('/api/projects/'+name+'/'+kind);
+  }catch(e){$('#msg').textContent=e.message}
+  refresh();
+}
+function card(p){
+  const s=p.stats,total=s.pages_total+s.assets_total,done=s.pages_done+s.assets_done;
+  const pct=p.state==='done'?100:total?Math.round(done/total*100):0;
+  const live=p.state==='running'||p.state==='finalizing';
+  const n=esc(p.name);
+  return `<div class="card proj"><div class="top"><span class="name">${esc(p.url)}</span><span class="st ${p.state}">${LABEL[p.state]||p.state}</span></div>
+  <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+  <div class="meta">${s.pages_done} halaman · ${s.assets_done} aset · ${s.pending} antre${s.errors?` · <a href="/api/projects/${n}/errors" target="_blank">${s.errors} gagal</a>`:''}</div>
+  ${p.error?`<div class="meta" style="color:var(--bad)">${esc(p.error)}</div>`:''}
+  <div class="acts">
+    ${p.ready&&!live?`<a class="btn primary" href="/preview/${n}/" target="_blank">Buka situs lokal</a>`:''}
+    ${live?`<button onclick="act('stop','${n}')">Hentikan</button>`:`<button onclick="act('resume','${n}')">${p.state==='done'?'Perbarui':'Lanjutkan'}</button>`}
+    ${p.ready&&!live?`<a class="btn" href="/api/projects/${n}/download">Unduh ZIP</a>`:''}
+    <button class="danger" onclick="act('del','${n}')" ${live?'disabled':''}>Hapus</button>
+  </div></div>`;
+}
+async function refresh(){
+  try{const ps=await api('/api/projects');
+    $('#list').innerHTML=ps.length?ps.map(card).join(''):'<div class="card empty">Belum ada proyek. Masukkan alamat situs di atas untuk memulai.</div>';
+  }catch{}
+}
+refresh();setInterval(refresh,1500);
+</script>
+</body>
+</html>
